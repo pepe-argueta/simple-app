@@ -1,9 +1,18 @@
 <link rel="import" href="../../bower_components/polymer/polymer-element.html">
 <link rel="import" href="../../bower_components/ids-form/ids-form.html">
+<link rel="import" href="../../bower_components/ids-table/ids-table.html">
+<link rel="import" href="../../bower_components/paper-styles/paper-styles.html">
+<!-- 
+    Recuerda que en el orden en que se cargan, en ese orden se aplican los estilos,
+    las ultimas definiciones tienen mayor prioridad. https://www.w3.org/TR/html-imports/#order-of-appearances
+-->
+<link rel="import" href="./ids-layout.html">
+<link rel="import" href="./ids-theme.html">
+<link rel="import" href="./ids-paper-button-styles.html">
 
 <dom-module id="ids-simple-app">
   <template>
-    <style>
+    <style include="ids-paper-button-styles">
       :host {
         display: block;
       }
@@ -17,7 +26,7 @@
       is-bypass
       fields="[[fields]]"
     >
-        <h1 slot="header">Datos de contacto</h1>            
+        <h1 slot="header">Datos de contacto</h1>
     </ids-form>
     
     <iron-ajax
@@ -28,7 +37,30 @@
       on-response="responseHandlerGetAll"
     ></iron-ajax>
 
-    {{stringify(data)}}
+    <ids-table
+      header="[[contactHeader]]"
+    >
+      <template is="dom-repeat" items="[[contactBody.items]]" as="row">
+        <ids-table-row slot="body" id="[[row.id]]">
+          <template is="dom-repeat" items="[[row.items]]" as="item">
+            <ids-table-cell>[[item.value]]</ids-table-cell>
+          </template>
+          <ids-table-cell on-cell-click="cellClickHandler">
+            <paper-button raised class="primary" id$="[[row.id]]" data-action="edit">Editar</paper-button>
+            <paper-button raised class="danger" id$="[[row.id]]" data-action="delete">Eliminar</paper-button>
+          </ids-table-cell>
+        </ids-table-row>
+      </template>
+    </ids-table>
+
+    <iron-ajax
+      id="action"
+      url="[[url]]"
+      method="PUT"
+      content-type="application/json"
+      body="[[data]]"
+    ></iron-ajax>
+    
   </template>
   <script>
     /**
@@ -60,7 +92,7 @@
             type: Array,
             value: () => ([
               { 
-                label: 'Escribe tu nombre',
+                label: 'Nombre',
                 name: 'nombre',
                 required: true,
                 autoValidate: true,
@@ -88,6 +120,14 @@
                 value: ''
               }
             ])
+          },
+          contactHeader: {
+            type: Object,
+            computed: '_computedHeader(fields)' 
+          },
+          contactBody: {
+            type: Object,
+            computed: '_computedBody(data)'
           }
         };
       }
@@ -105,7 +145,10 @@
       responseHandlerGetAll (e) {
         const ironRequestInst = e.detail;
 
-        this.set('data', ironRequestInst.response)
+        if (ironRequestInst.status === 200 ) {
+          this.set('data', ironRequestInst.response)
+          localStorage.setItem('contacts', JSON.stringify(ironRequestInst.response));
+        }
       }
 
       presubmitBypassHandler (e) {
@@ -117,6 +160,56 @@
         ironRequest.params = {}; // evitar enviar los params como query string
         ironRequest.body = newData;
         ironRequest.generateRequest(); // Genera y envia la peticion
+      }
+
+      cellClickHandler (e) {
+        const action = e.detail.dataset.action;
+        const id = e.detail.id;
+
+        if (typeof this[`${action}Item`] === 'function') {
+          this[`${action}Item`](id);  
+        }
+      }
+
+      deleteItem (id) {
+        const data = this.get('data')
+        const newData = this.data.filter(item => {
+          if(item.id === id) {
+            return false
+          }
+
+          return true
+        });
+
+        this.set('data', newData);
+        this.$.action.generateRequest();
+      }
+
+      _computedHeader (fields) {
+        const headers = fields.map(item => {
+          return Object.assign({}, item, { value: item.label });
+        });
+
+        return {
+          items: headers.concat({ value: 'Acciones' })
+        };
+      }
+
+      _computedBody (data) {
+        const finalObj = {}
+
+        finalObj.items = data.map(item => {
+          return { 
+            id: item.id,
+            items: Object.keys(item)
+                    .filter(key => key!== 'id')
+                    .map(key => {
+                        return { value: item[key] };
+                    })
+          };
+        });
+        
+        return finalObj
       }
 
       stringify(obj) {
