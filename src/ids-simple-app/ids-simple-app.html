@@ -1,0 +1,129 @@
+<link rel="import" href="../../bower_components/polymer/polymer-element.html">
+<link rel="import" href="../../bower_components/ids-form/ids-form.html">
+
+<dom-module id="ids-simple-app">
+  <template>
+    <style>
+      :host {
+        display: block;
+      }
+    </style>
+    <ids-form
+      on-ids-form-presubmit-bypass="presubmitBypassHandler"
+      on-ids-form-response="responseHandler"
+      action="[[url]]"
+      enctype="[[enctype]]"
+      method="PUT"
+      is-bypass
+      fields="[[fields]]"
+    >
+        <h1 slot="header">Datos de contacto</h1>            
+    </ids-form>
+    
+    <iron-ajax
+      auto
+      method="GET"
+      url="[[url]]"
+      handleAs="json"
+      on-response="responseHandlerGetAll"
+    ></iron-ajax>
+
+    {{stringify(data)}}
+  </template>
+  <script>
+    /**
+     * @customElement
+     * @polymer
+     */
+    class IdsSimpleApp extends Polymer.Element {
+      constructor () {
+        super();
+      }
+
+      static get is() { return 'ids-simple-app'; }
+      static get properties() {
+        return {
+          // El servicio utilizando el verbo PUT nos regresa el array de contactos
+          url: {
+            type: String,
+            value: 'https://api.myjson.com/bins/197w26'
+          },
+          enctype: {
+            type: String,
+            value: 'application/json'
+          },
+          data: {
+            type: Array,
+            value: JSON.parse(localStorage.getItem('contacts')) || [],
+          },
+          fields: {
+            type: Array,
+            value: () => ([
+              { 
+                label: 'Escribe tu nombre',
+                name: 'nombre',
+                required: true,
+                autoValidate: true,
+                pattern: '^[a-zA-Z\\s]{10,}$',
+                value: ''
+              },
+              {
+                label: 'Email',
+                name: 'email',
+                email: 'jaime.cervantes@email.com', 
+                required: true,
+                autoValidate: true,
+                pattern: '^([a-zA-Z0-9_\\-\\.]+)@([a-zA-Z0-9_\\-\\.]+)\\.([a-zA-Z]{2,5})$',
+                value: ''
+              },
+              { 
+                label: 'Telefono',
+                name: 'telefono',
+                required: true,
+                value: ''
+              },
+              {
+                label: 'Telefono Trabajo',
+                name: 'telefonoTrabajo',
+                value: ''
+              }
+            ])
+          }
+        };
+      }
+
+      responseHandler (e) {
+        const ironRequestInst = e.detail; 
+
+        if (ironRequestInst.status === 200 ) {
+          alert('El contacto se guardo correctamente');
+          this.set('data', ironRequestInst.response);
+          localStorage.setItem('contacts', JSON.stringify(ironRequestInst.response));
+        }
+      }
+
+      responseHandlerGetAll (e) {
+        const ironRequestInst = e.detail;
+
+        this.set('data', ironRequestInst.response)
+      }
+
+      presubmitBypassHandler (e) {
+        const ironRequest = e.detail.ironRequest;
+        const newId = Math.random().toString(36).substring(2);
+        const serializedData = Object.assign({}, e.detail.serializedData, { id: newId }); // {...objeto, ...otroOjeto}
+        const newData = this.data.concat(serializedData); // [...array, otroArray]
+        
+        ironRequest.params = {}; // evitar enviar los params como query string
+        ironRequest.body = newData;
+        ironRequest.generateRequest(); // Genera y envia la peticion
+      }
+
+      stringify(obj) {
+        return JSON.stringify(obj);
+      }
+    }
+
+    window.customElements.define(IdsSimpleApp.is, IdsSimpleApp);
+  </script>
+</dom-module>
