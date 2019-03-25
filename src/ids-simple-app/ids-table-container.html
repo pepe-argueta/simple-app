@@ -1,0 +1,108 @@
+<link rel="import" href="../../bower_components/polymer/polymer-element.html">
+<link rel="import" href="../../bower_components/ids-table/ids-table.html">
+<link rel="import" href="../../bower_components/paper-button/paper-button.html">
+
+<dom-module id="ids-table-container">
+  <template>
+    <style include="ids-paper-button-styles">
+      :host {
+        display: block;
+      }
+    </style>
+
+    <iron-ajax
+      auto
+      method="GET"
+      url="[[url]]"
+      handleAs="json"
+      on-response="responseHandlerGetAll"
+    ></iron-ajax>
+
+    <ids-table
+      header="[[header]]"
+    >
+      <template is="dom-repeat" items="[[body.items]]" as="row">
+        <ids-table-row slot="body" id="[[row.id]]">
+          <template is="dom-repeat" items="[[row.items]]" as="item">
+            <ids-table-cell>[[item.value]]</ids-table-cell>
+          </template>
+          <ids-table-cell on-cell-click="cellClickHandler">
+            <paper-button raised class="primary" id$="[[row.id]]" data-action="edit">Editar</paper-button>
+            <paper-button raised class="danger" id$="[[row.id]]" data-action="delete">Eliminar</paper-button>
+          </ids-table-cell>
+        </ids-table-row>
+      </template>
+    </ids-table>
+
+    <iron-ajax
+      id="action"
+      url="[[url]]"
+      method="PUT"
+      content-type="application/json"
+      body="[[data]]"
+    ></iron-ajax>
+  </template>
+
+  <script>
+    /**
+     * `ids-table-container`
+     * 
+     *
+     * @customElement
+     * @polymer
+     * @demo demo/index.html
+     */
+    class IdsTableContainer extends Polymer.Element {
+      static get is() { return 'ids-table-container'; }
+      static get properties() {
+        return {
+          url: String,
+          data: {
+            type: Array,
+            notify: true
+          },
+          header: Object,
+          body: Object
+        };
+      }
+
+      responseHandlerGetAll (e) {
+        const ironRequestInst = e.detail;
+
+        if (ironRequestInst.status === 200 ) {
+          this.set('data', ironRequestInst.response)
+          localStorage.setItem('contacts', JSON.stringify(ironRequestInst.response));
+        }
+      }
+
+      cellClickHandler (e) {
+        const action = e.detail.dataset.action;
+        const id = e.detail.id;
+
+        if (typeof this[`${action}Item`] === 'function') {
+          this[`${action}Item`](id);  
+        }
+      }
+
+      deleteItem (id) {
+        const data = this.get('data')
+        const newData = this.data.filter(item => {
+          if(item.id === id) {
+            return false
+          }
+
+          return true
+        });
+
+        this.set('data', newData);
+        this.$.action.generateRequest();
+      }
+
+      editItem (id) {
+        // @TODO: funcionalidad de edición
+      }
+    }
+
+    window.customElements.define(IdsTableContainer.is, IdsTableContainer);
+  </script>
+</dom-module>

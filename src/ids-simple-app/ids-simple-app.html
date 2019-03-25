@@ -3,6 +3,7 @@
 <link rel="import" href="../../bower_components/ids-table/ids-table.html">
 <link rel="import" href="../../bower_components/paper-styles/paper-styles.html">
 <link rel="import" href="../../bower_components/ids-default-theme/ids-default-theme.html">
+<link rel="import" href="./ids-table-container.html">
 <!-- 
     Recuerda que en el orden en que se cargan, en ese orden se aplican los estilos,
     las ultimas definiciones tienen mayor prioridad. https://www.w3.org/TR/html-imports/#order-of-appearances
@@ -10,11 +11,12 @@
 
 <dom-module id="ids-simple-app">
   <template>
-    <style include="ids-paper-button-styles">
+    <style>
       :host {
         display: block;
       }
     </style>
+
     <ids-form
       on-ids-form-presubmit-bypass="presubmitBypassHandler"
       on-ids-form-response="responseHandler"
@@ -27,37 +29,14 @@
         <h1 slot="header">Datos de contacto</h1>
     </ids-form>
     
-    <iron-ajax
-      auto
-      method="GET"
-      url="[[url]]"
-      handleAs="json"
-      on-response="responseHandlerGetAll"
-    ></iron-ajax>
 
-    <ids-table
+    <ids-table-container
+      data="{{data}}"
       header="[[contactHeader]]"
-    >
-      <template is="dom-repeat" items="[[contactBody.items]]" as="row">
-        <ids-table-row slot="body" id="[[row.id]]">
-          <template is="dom-repeat" items="[[row.items]]" as="item">
-            <ids-table-cell>[[item.value]]</ids-table-cell>
-          </template>
-          <ids-table-cell on-cell-click="cellClickHandler">
-            <paper-button raised class="primary" id$="[[row.id]]" data-action="edit">Editar</paper-button>
-            <paper-button raised class="danger" id$="[[row.id]]" data-action="delete">Eliminar</paper-button>
-          </ids-table-cell>
-        </ids-table-row>
-      </template>
-    </ids-table>
-
-    <iron-ajax
-      id="action"
+      body="[[contactBody]]",
       url="[[url]]"
-      method="PUT"
-      content-type="application/json"
-      body="[[data]]"
-    ></iron-ajax>
+    >
+    </ids-table-container>
     
   </template>
   <script>
@@ -140,15 +119,6 @@
         }
       }
 
-      responseHandlerGetAll (e) {
-        const ironRequestInst = e.detail;
-
-        if (ironRequestInst.status === 200 ) {
-          this.set('data', ironRequestInst.response)
-          localStorage.setItem('contacts', JSON.stringify(ironRequestInst.response));
-        }
-      }
-
       presubmitBypassHandler (e) {
         const ironRequest = e.detail.ironRequest;
         const newId = Math.random().toString(36).substring(2);
@@ -158,29 +128,6 @@
         ironRequest.params = {}; // evitar enviar los params como query string
         ironRequest.body = newData;
         ironRequest.generateRequest(); // Genera y envia la peticion
-      }
-
-      cellClickHandler (e) {
-        const action = e.detail.dataset.action;
-        const id = e.detail.id;
-
-        if (typeof this[`${action}Item`] === 'function') {
-          this[`${action}Item`](id);  
-        }
-      }
-
-      deleteItem (id) {
-        const data = this.get('data')
-        const newData = this.data.filter(item => {
-          if(item.id === id) {
-            return false
-          }
-
-          return true
-        });
-
-        this.set('data', newData);
-        this.$.action.generateRequest();
       }
 
       _computedHeader (fields) {
