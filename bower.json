@@ -2,7 +2,10 @@
   "name": "simple-app",
   "main": "index.html",
   "dependencies": {
-    "polymer": "Polymer/polymer#^2.0.0"
+    "polymer": "Polymer/polymer#^2.0.0",
+    "ids-form": "https://github.com/jaimeCervantes/ids-form.git",
+    "ids-table": "https://github.com/jaimeCervantes/ids-table.git",
+    "ids-default-theme": "https://github.com/jaimeCervantes/ids-default-theme.git"
   },
   "devDependencies": {
     "web-component-tester": "Polymer/web-component-tester#^6.0.0",
